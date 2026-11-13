@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Anime Codenames Online</title>
+<style>
+:root{--bg:#10152b;--panel:rgba(15,21,43,.93);--line:#ffffff24;--text:#f4f5ff;--muted:#b7bfdc;--red:#e85b70;--blue:#5797f5;--green:#50c69a;--yellow:#e8bd55}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;color:var(--text);font-family:Tahoma,Arial,sans-serif;background:radial-gradient(circle at 80% 10%,#59658e 0 2px,transparent 3px),linear-gradient(145deg,#202c50,#10172d 70%);background-attachment:fixed}
+.wrap{max-width:1100px;margin:auto;padding:22px 14px 45px}header{text-align:center;margin:8px 0 20px}h1{font-size:clamp(26px,5vw,42px);margin:0 0 8px}.sub,.small{color:var(--muted);font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:16px;margin:12px 0;box-shadow:0 10px 30px #05091666}
+input{width:100%;background:#0c142c;color:white;border:1px solid var(--line);border-radius:10px;padding:12px;font:inherit}
+button{font:inherit;border:0;border-radius:10px;padding:11px 15px;background:#e8eaff;color:#141a32;font-weight:bold;cursor:pointer}button:disabled{opacity:.35;cursor:not-allowed}.primary{background:#c7b9ff}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:1}.hidden{display:none!important}
+.team-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:12px 0}.team{min-height:64px;color:white;border:2px solid transparent}.team.red{background:var(--red)}.team.blue{background:var(--blue)}.team.green{background:var(--green);color:#09291f}.team.yellow{background:var(--yellow);color:#332509}.team.selected{outline:3px solid white;outline-offset:2px}.team.taken{filter:grayscale(1);opacity:.45}
+.lobby-players,.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.player{padding:11px;border:1px solid var(--line);border-radius:12px;background:#111a34}.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-left:6px}.order{display:inline-flex;width:24px;height:24px;border-radius:50%;background:#eee;color:#20243d;align-items:center;justify-content:center;font-weight:bold;margin-left:5px}
+.board{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:7px;margin-top:13px}.card{min-height:72px;padding:6px 3px;background:#eee9dd;color:#263047;border:2px solid white;border-radius:9px;font-weight:bold;font-size:clamp(10px,1.5vw,14px)}.card.red{background:var(--red);color:white}.card.blue{background:var(--blue);color:white}.card.green{background:var(--green);color:#09291f}.card.yellow{background:var(--yellow);color:#332509}.card.white{background:#f5f2eb;color:#30364a}.card.black{background:#171923;color:white}.card:disabled{opacity:1}
+.notice{color:#ffe4a3;min-height:24px;margin:10px 0}.chatlog{height:140px;overflow:auto;background:#0b1228;border-radius:10px;padding:10px;font-size:13px}.chatline{padding:6px 0;border-bottom:1px solid #ffffff15}
+@media(max-width:700px){.team-grid,.lobby-players,.stats{grid-template-columns:repeat(2,1fr)}.board{grid-template-columns:repeat(5,1fr)}.card{min-height:62px}}
+</style>
+</head>
+<body><div class="wrap">
+<header><h1>✦ Anime Codenames ✦</h1><div class="sub">أربعة لاعبين • أربعة أجهزة • غرفة واحدة عبر الإنترنت</div></header>
+
+<section id="connect" class="panel">
+<h3>الدخول إلى اللعبة</h3>
+<p class="small">أنشئ غرفة وشارك رمزها مع أصدقائك، أو أدخل رمز غرفة موجودة.</p>
+<div class="row"><input id="playerName" maxlength="20" placeholder="اسمك داخل اللعبة"><button class="primary" id="createRoom">إنشاء غرفة</button></div>
+<div class="row" style="margin-top:8px"><input id="roomCode" maxlength="6" placeholder="رمز الغرفة"><button id="joinRoom">دخول الغرفة</button></div>
+<div class="notice" id="connectNotice"></div>
+</section>
+
+<section id="lobby" class="panel hidden">
+<div class="row"><div><h3 style="margin:0">غرفة <span id="roomLabel"></span></h3><div class="small">شارك الرمز مع أصدقائك: <b id="shareCode"></b></div></div><button id="copyCode">نسخ الرمز</button></div>
+<h4>اختر فريقك بضغط زر واحد</h4>
+<div class="team-grid" id="teamButtons"></div>
+<div class="small">كل لون يستطيع لاعب واحد فقط حجزه. إذا اختاره لاعب، يصبح غير متاح للآخرين.</div>
+<h4>اللاعبون في الغرفة</h4><div class="lobby-players" id="lobbyPlayers"></div>
+<div class="row" style="margin-top:14px"><button class="primary" id="startGame" disabled>ابدأ اللعبة (لمنشئ الغرفة)</button><button id="leaveRoom">مغادرة الغرفة</button></div>
+<div class="notice" id="lobbyNotice">بانتظار انضمام اللاعبين الأربعة واختيار الفرق.</div>
+</section>
+
+<section id="game" class="hidden">
+<div class="panel">
+<div class="row"><div><b id="turnName"></b><div class="small" id="turnInfo"></div></div><div><b>رمز الغرفة: <span id="gameCode"></span></b></div></div>
+<div class="stats" id="stats" style="margin-top:12px"></div>
+</div>
+<div class="panel"><div class="small">ألوان الفرق الأخرى ظاهرة، أما لونك والبطاقات البيضاء والسوداء فتبقى مخفية حتى تختارها.</div>
+<div class="board" id="board"></div><div class="notice" id="gameNotice"></div>
+<div id="clueBox" class="panel hidden"><b id="clueTitle">اكتب تلميحك للاعب التالي</b><div class="row" style="margin-top:8px"><input id="clueInput" maxlength="100" placeholder="اكتب التلميح هنا"><button class="primary" id="sendClue">إرسال التلميح</button></div><div class="small" id="clueHelp"></div></div>
+</div>
+<div class="panel"><b>💬 سجل التلميحات</b><div id="chatlog" class="chatlog"></div></div>
+</section>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+// ضع إعدادات مشروع Firebase الخاص بك هنا بعد إنشائه من وحدة تحكم Firebase.
+ const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT",
+  appId: "YOUR_APP_ID"
+};
+const COLORS=['red','blue','green','yellow'];
+const LABEL={red:'الأحمر',blue:'الأزرق',green:'الأخضر',yellow:'الأصفر'};
+const HEX={red:'#e85b70',blue:'#5797f5',green:'#50c69a',yellow:'#e8bd55'};
+const WORDS=['تانجيرو','نيزوكو','إيرين','ليفاي','ساسكي','ناروتو','غوجو','ميكاسا','قمر','سيف','تنين','مطر','مدرسة','مكتبة','قهوة','بحر','مفتاح','ساعة','مجرة','ثلج','بركان','قطار','مدينة','قلعة','زهرة','نسر','ذئب','روبوت','سفينة','خوذة','خريطة','مرآة','ظل','نجمة','موسيقى','كرة','نهر','جبل','حديقة','شوكولا','هاتف','حاسوب','كتاب','ريشة','مظلة','جزيرة','صندوق','تاج','بوابة','مغامرة','لغز','طاقة','ريح','نار','ماء','أرض','هواء','قناع','وحش','بطل','نينجا','ساموراي','ساحر','طبيب','طيار','مصور','فارس','صياد','شجرة','سحابة','شمس','ليل','فجر','شتاء','صيف','ربيع','مركبة','مصباح','بوصلة','جرس','حلوى','تفاحة','ليمون','قطة','غراب','فراشة','نحلة','سمكة','دلفين','سلحفاة','صقر','حصان','نمر','فيل','كنز','رسالة','قلم','لوحة','مسرح','قصر','جسر','نفق','مطار','كوكب','مذنب','شهاب','بلورة','درع','رمح','قوس','سهم','تعويذة','باب','نافذة','مصعد','مصنع','منارة','سوق','مطعم','مخبز','حقيبة','حذاء','قبعة','خاتم','كاميرا','سماعة','دراجة','غواصة','منطاد','دمية','مكعب','نرد','مقص','طبلة','كمان','بيانو','مهرجان','بطولة','مباراة','هدف','فريق','مدرب','حارس','مهاجم','مخترع','عالم','رسام','كاتب','محقق','ملك','ملكة','أمير','أميرة','شبح','عملاق','جنية','عنقاء','غابة','كهف','شلال','صحراء','واحة','محيط','شاطئ','ميناء','قرية','عاصمة','متاهة','معبد','برج','مختبر','مرصد','محطة','فضاء','لؤلؤة','مرجان','عطلة','مفاجأة','سر','وعد','حلم','ذكرى','شجاعة','صداقة','سرعة','قوة','ذكاء','حظ','سلام','صمت','صدى','صوت','لون','شكل','رقم'];
+let app,db,auth,roomRef,roomCode='',uid='',isHost=false,localPlayerId='',unsubscribe=null,state=null;
+const $=id=>document.getElementById(id);
+const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+function configured(){return firebaseConfig.apiKey!=='YOUR_API_KEY'&&firebaseConfig.projectId!=='YOUR_PROJECT'}
+async function initFirebase(){
+ if(!configured())throw new Error('يلزم أولاً ربط اللعبة بمشروع Firebase. راجع ملف تعليمات النشر.');
+ if(!app){app=firebase.initializeApp(firebaseConfig);auth=firebase.auth();db=firebase.database()}
+ const cred=await auth.signInAnonymously();uid=cred.user.uid;
+}
+function code6(){return Math.random().toString(36).slice(2,8).toUpperCase()}
+function setNotice(id,msg){$(id).textContent=msg}
+function show(id){$(id).classList.remove('hidden')}function hide(id){$(id).classList.add('hidden')}
+function playerList(s){return Object.values(s.players||{}).sort((a,b)=>a.order-b.order)}
+async function createRoom(){
+ try{await initFirebase();localPlayerId=uid;const name=$('playerName').value.trim()||'اللاعب';let code=code6();roomRef=db.ref('rooms/'+code);
+ const initial={host:uid,createdAt:firebase.database.ServerValue.TIMESTAMP,started:false,players:{},game:null};
+ await roomRef.set(initial);roomCode=code;isHost=true;await joinAsPlayer(name);listenRoom();
+ }catch(e){setNotice('connectNotice',e.message)}
+}
+async function joinRoom(){
+ try{await initFirebase();const code=$('roomCode').value.trim().toUpperCase();if(!/^[A-Z0-9]{6}$/.test(code))throw new Error('اكتب رمز الغرفة المكوّن من 6 أحرف.');roomCode=code;roomRef=db.ref('rooms/'+code);const snap=await roomRef.get();if(!snap.exists())throw new Error('لم يتم العثور على هذه الغرفة.');isHost=false;localPlayerId=uid;await joinAsPlayer($('playerName').value.trim()||'اللاعب');listenRoom();
+ }catch(e){setNotice('connectNotice',e.message)}
+}
+async function joinAsPlayer(name){
+ const playersRef=roomRef.child('players');
+ const result=await playersRef.transaction(players=>{
+  players=players||{};
+  if(players[uid])return players;
+  if(Object.keys(players).length>=4)return;
+  players[uid]={uid,name,team:null,order:Object.keys(players).length+1,score:0,hearts:3};
+  return players;
+ });
+ if(!result.committed)throw new Error('الغرفة ممتلئة؛ يوجد أربعة لاعبين بالفعل.');
+}
+function listenRoom(){
+ hide('connect');show('lobby');$('roomLabel').textContent=roomCode;$('shareCode').textContent=roomCode;
+ if(unsubscribe)roomRef.off('value',unsubscribe);
+ unsubscribe=snap=>{state=snap.val();if(!state){setNotice('lobbyNotice','انتهت الغرفة.');return}if(state.started){hide('lobby');show('game');renderGame()}else{show('lobby');renderLobby()}};
+ roomRef.on('value',unsubscribe);
+}
+async function chooseTeam(team){
+ if(!state||state.started)return;
+ const playersRef=roomRef.child('players');
+ await playersRef.transaction(players=>{
+  players=players||{};const me=players[uid];if(!me)return;
+  Object.keys(players).forEach(k=>{if(k!==uid&&players[k].team===team)return});
+  if(Object.values(players).some(p=>p.uid!==uid&&p.team===team))return;
+  me.team=team;players[uid]=me;return players;
+ });
+}
+function renderLobby(){
+ const ps=playerList(state);
+ $('teamButtons').innerHTML=COLORS.map(c=>{const owner=ps.find(p=>p.team===c);const mine=state.players[uid]?.team===c;return `<button class="team ${c} ${mine?'selected':''} ${owner&&!mine?'taken':''}" data-team="${c}" ${owner&&!mine?'disabled':''}>${LABEL[c]}${owner?` — ${owner.name}`:' — متاح'}</button>`}).join('');
+ document.querySelectorAll('[data-team]').forEach(b=>b.onclick=()=>chooseTeam(b.dataset.team));
+ $('lobbyPlayers').innerHTML=ps.map(p=>`<div class="player"><span class="order">${p.order}</span><b>${p.name}</b><div class="small">${p.team?LABEL[p.team]:'لم يختر فريقاً بعد'}</div></div>`).join('');
+ $('startGame').disabled=!(isHost&&ps.length===4&&ps.every(p=>p.team));
+ setNotice('lobbyNotice',ps.length<4?`بانتظار ${4-ps.length} لاعب/لاعبين...`:ps.every(p=>p.team)?'الفرق جاهزة. منشئ الغرفة يستطيع بدء اللعبة.':'على كل لاعب اختيار فريق مختلف.');
+}
+async function startGame(){
+ if(!isHost||!state)return;const ps=playerList(state);if(ps.length!==4||ps.some(p=>!p.team)||new Set(ps.map(p=>p.team)).size!==4)return;
+ const types=[];COLORS.forEach(c=>{for(let i=0;i<6;i++)types.push(c)});for(let i=0;i<25;i++)types.push('white');types.push('black');const words=shuffle(WORDS),shuffled=shuffle(types);
+ const cards=shuffled.map((type,i)=>({type,word:words[i%words.length],revealed:false}));
+ const players={};ps.forEach(p=>players[p.uid]={...p,score:0,hearts:3});
+ await roomRef.update({started:true,game:{players,cards,turn:0,phase:'openingClue',clues:[],notice:'اللاعب الأول يبدأ بإرسال تلميح للاعب الثاني قبل اختيار أول بطاقة.',over:false}});
+}
+async function updateGame(mutator){if(!state?.game||state.game.over)return;const snap=await roomRef.child('game').get();const g=snap.val();if(!g)return;const changed=mutator(g);if(changed)await roomRef.child('game').set(g)}
+function renderGame(){
+ const g=state.game;if(!g)return;const ps=Object.values(g.players).sort((a,b)=>a.order-b.order),p=ps[g.turn],me=g.players[uid];
+ $('gameCode').textContent=roomCode;$('turnName').textContent=`الدور ${p.order}: ${p.name}`;$('turnInfo').textContent=`الفريق ${LABEL[p.team]} • ${g.phase==='openingClue'?'تلميح البداية':g.phase==='clue'?'إرسال التلميح':'اختيار بطاقة'}`;
+ $('stats').innerHTML=ps.map(x=>`<div class="player" style="border-top:3px solid ${HEX[x.team]}"><span class="order">${x.order}</span><span class="dot" style="background:${HEX[x.team]}"></span><b>${x.name}</b><div class="small">النقاط: ${x.score}</div><div style="color:#ff8295"> ${'♥'.repeat(x.hearts)}${'♡'.repeat(3-x.hearts)}</div></div>`).join('');
+ $('board').innerHTML='';g.cards.forEach((c,i)=>{const b=document.createElement('button');b.className='card'+(c.revealed?' '+c.type:'');if(c.revealed)b.textContent=c.word;else if(c.type!==me.team&&c.type!=='white'&&c.type!=='black'){b.classList.add(c.type);b.textContent=c.word}else b.textContent='؟';b.disabled=c.revealed||g.over||p.uid!==uid||g.phase!=='pick';b.onclick=()=>chooseCard(i);$('board').appendChild(b)});
+ const clueVisible=p.uid===uid&&!g.over&&(g.phase==='openingClue'||g.phase==='clue');$('clueBox').classList.toggle('hidden',!clueVisible);
+ $('clueTitle').textContent=g.phase==='openingClue'?'أرسل تلميح البداية للاعب التالي':'اكتب تلميحك للاعب التالي';
+ $('clueHelp').textContent=g.phase==='openingClue'?'هذه خطوة البداية: أعطِ اللاعب الثاني تلميحاً قبل أن يختار أول بطاقة.':'إرسال التلميح ينهي دورك وينقل اللعب إلى اللاعب التالي.';
+ $('sendClue').disabled=!clueVisible;
+ $('gameNotice').textContent=g.notice||'';
+ $('chatlog').innerHTML=(g.clues||[]).map(c=>`<div class="chatline"><b>${c.from}</b> ← إلى ${c.to}: ${c.text}</div>`).join('');
+}
+async function chooseCard(i){
+ await updateGame(g=>{const ps=Object.values(g.players).sort((a,b)=>a.order-b.order),p=ps[g.turn],c=g.cards[i];if(p.uid!==uid||g.phase!=='pick'||c.revealed)return false;c.revealed=true;if(c.type===p.team){p.score+=10;g.notice='إجابة صحيحة! +10 نقاط.'}else if(c.type==='black'){g.notice='ظهرت البطاقة السوداء؛ انتهت اللعبة.';g.over=true}else{p.hearts=Math.max(0,p.hearts-1);g.notice=c.type==='white'?'بطاقة بيضاء: خسرت قلباً.':'بطاقة من فريق آخر: خسرت قلباً.'}if(p.hearts===0){g.over=true;g.notice+=' انتهت قلوب اللاعب؛ انتهت اللعبة.'}if(g.cards.every(x=>x.revealed)){g.over=true;g.notice+=' انتهت البطاقات.'}if(!g.over)g.phase='clue';return true});
+}
+async function sendClue(){
+ const textClue=$('clueInput').value.trim();if(!textClue)return;
+ await updateGame(g=>{const ps=Object.values(g.players).sort((a,b)=>a.order-b.order),p=ps[g.turn];if(p.uid!==uid||!['openingClue','clue'].includes(g.phase))return false;const next=ps[(g.turn+1)%4];g.clues=g.clues||[];g.clues.push({from:p.name,to:next.name,text:textClue,at:Date.now()});g.turn=(g.turn+1)%4;g.phase='pick';g.notice=`وصل التلميح إلى ${next.name}. حان دوره لاختيار بطاقة.`;return true});
+ $('clueInput').value='';
+}
+$('createRoom').onclick=createRoom;$('joinRoom').onclick=joinRoom;$('startGame').onclick=startGame;$('sendClue').onclick=sendClue;
+$('copyCode').onclick=()=>navigator.clipboard?.writeText(roomCode);
+$('leaveRoom').onclick=async()=>{if(roomRef){await roomRef.child('players/'+uid).remove();roomRef.off();}location.reload()};
+</script></body></html>
